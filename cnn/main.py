@@ -14,6 +14,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #             (device, (n,3072)int16, (n)int8)
 ##############################################################
 
+file_path = '.\cifar-10-batches-py'
+
 def unpickle(file):
     with open(file, 'rb') as fo:
         dict = pickle.load(fo, encoding='bytes')
@@ -32,14 +34,14 @@ data_train = torch.tensor([], dtype=torch.float, device=device)
 label_train = torch.tensor([], dtype=torch.int8, device=device)
 
 for i in range(1,6):
-    file = "D:\研\人工智能安全\cifar-10-python (1)\cifar-10-batches-py\data_batch_" + str(i)
+    file = file_path + '\data_batch_' + str(i)
     data_batch = unpickle(file)
     data_train = torch.cat([data_train, torch.tensor(data_batch[b'data'], dtype=torch.float, device=device)], dim=0)
     label_train = torch.cat([label_train, torch.tensor(data_batch[b'labels'], dtype=torch.long, device=device)], dim=0)
 
 data_train = data_train.view(-1, 3, 32, 32)
 
-file = "D:\研\人工智能安全\cifar-10-python (1)\cifar-10-batches-py\\test_batch"
+file = file_path + "\\test_batch"
 data_batch = unpickle(file)
 data_validation = torch.tensor(data_batch[b'data'], dtype=torch.float, device=device)
 label_validation = torch.tensor(data_batch[b'labels'], dtype=torch.long, device=device)
@@ -48,6 +50,7 @@ data_validation = data_validation.view(-1, 3, 32, 32)
 ####################################################################################
 #                       模型LeNet
 ####################################################################################
+
 
 class LeNet(nn.Module):
     def __init__(self):
@@ -61,10 +64,13 @@ class LeNet(nn.Module):
             nn.MaxPool2d(2, 2)
         )
         self.fc = nn.Sequential(
+            nn.Dropout(p=0.2),
             nn.Linear(25*4*4, 120),
             nn.Sigmoid(),
+            nn.Dropout(p=0.2),
             nn.Linear(120, 84),
             nn.Sigmoid(),
+            nn.Dropout(p=0.2),
             nn.Linear(84, 10)
         )
 
@@ -99,11 +105,12 @@ def train(net, data_iter, batch_size, optimizer, device, num_epochs, data_train,
     net = net.to(device)
     print("training on ", device)
     loss = torch.nn.CrossEntropyLoss()
+    start = time.time()
     for epoch in range(num_epochs):
         train_iter = data_iter(batch_size, data_train, label_train)
         test_iter = data_iter(batch_size, data_validation, label_validation)
-        print("epoch " + str(epoch+1) + ":")
-        train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
+        #print("epoch " + str(epoch+1) + ":")
+        train_l_sum, train_acc_sum, n, batch_count = 0.0, 0.0, 0, 0
         for X, y in train_iter:
             X = X.to(device)
             y = y.to(device)
@@ -116,15 +123,21 @@ def train(net, data_iter, batch_size, optimizer, device, num_epochs, data_train,
             train_acc_sum += (y_hat.argmax(dim=1) == y).sum().cpu().item()
             n += y.shape[0]
             batch_count += 1
-        test_acc = evaluate_accuracy(test_iter, net)
-        print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec'
+        if (epoch%10 == 0):
+            test_acc = evaluate_accuracy(test_iter, net)
+            print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec'
               % (epoch + 1, train_l_sum / batch_count, train_acc_sum / n, test_acc, time.time() - start))
+            start = time.time()
 
+
+timer = time.time()
 
 net = LeNet()
 print(net)
-lr, num_epochs = 0.001, 50
-batch_size = 128
+lr, num_epochs = 0.001, 1000
+batch_size = 256
 optimizer = torch.optim.Adam(net.parameters(), lr=lr)
 train(net, data_iter, batch_size, optimizer, device, num_epochs, data_train, label_train,
             data_validation, label_validation)
+
+print('total time: %.1f sec' % (time.time() - timer))
