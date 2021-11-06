@@ -76,7 +76,7 @@ for epoch in range(num_epochs):
         X = X.float()
         y = y.long()
         output = net(X)
-        #print(output,y)
+        # print(output,y)
         l = loss(output, y)
         optimizer.zero_grad()
         l.backward()
