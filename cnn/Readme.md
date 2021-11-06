@@ -36,3 +36,4 @@ And the results are as follows:
 ![image](Accuracy%20with%20Different%20Dropout%20Probability(in%20Validation%20Set).png)  
 
 ![image](Accuracy%20Deviation(Train%20-%20Validation)%20with%20Different%20Dropout%20Probability.png)  
+(Notice that the accuracy in train set is computed with Dropout Layer while validation set on the contrary)
